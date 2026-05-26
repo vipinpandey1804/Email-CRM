@@ -29,11 +29,23 @@ export function useTemplate(id: string) {
   })
 }
 
+// GrapesJS emits arrays/objects for components & styles, so JSON fields are
+// loosely typed here rather than reusing EmailTemplate's stricter shape.
+export interface TemplateSavePayload {
+  name?: string
+  category?: string
+  thumbnail_url?: string
+  gjs_components?: unknown
+  gjs_styles?: unknown
+  mjml_source?: string
+  html_output?: string
+}
+
 export function useSaveTemplate(id: string) {
   const qc = useQueryClient()
   const orgSlug = getOrgSlug()
   return useMutation({
-    mutationFn: (payload: Partial<EmailTemplate>) =>
+    mutationFn: (payload: TemplateSavePayload) =>
       api.patch(`/templates/${id}?org_slug=${orgSlug}`, payload).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['template', id] })
