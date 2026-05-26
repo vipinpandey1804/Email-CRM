@@ -2,6 +2,7 @@ from ninja import Router
 from ninja.errors import HttpError
 from typing import List, Optional
 from uuid import UUID
+from django.db.models import Q
 from organizations.models import OrganizationUser
 from apps.accounts.auth import JWTAuth
 from apps.templates_app.models import EmailTemplate
@@ -23,7 +24,8 @@ def _get_org_or_403(user, org_slug: str):
 @router.get('/', response=List[TemplateOut])
 def list_templates(request, org_slug: str, category: Optional[str] = None, is_system: Optional[bool] = None):
     org = _get_org_or_403(request.auth, org_slug)
-    qs = EmailTemplate.objects.filter(organization=org)
+    # The org's own templates PLUS shared system templates (starting points).
+    qs = EmailTemplate.objects.filter(Q(organization=org) | Q(is_system=True))
     if category:
         qs = qs.filter(category=category)
     if is_system is not None:
@@ -47,7 +49,7 @@ def create_template(request, org_slug: str, payload: TemplateCreateIn):
 def get_template(request, org_slug: str, template_id: UUID):
     org = _get_org_or_403(request.auth, org_slug)
     try:
-        t = EmailTemplate.objects.get(id=template_id, organization=org)
+        t = EmailTemplate.objects.get(Q(organization=org) | Q(is_system=True), id=template_id)
     except EmailTemplate.DoesNotExist:
         raise HttpError(404, 'Template not found')
     return TemplateOut.from_orm(t)
@@ -81,13 +83,14 @@ def delete_template(request, org_slug: str, template_id: UUID):
 def duplicate_template(request, org_slug: str, template_id: UUID):
     org = _get_org_or_403(request.auth, org_slug)
     try:
-        t = EmailTemplate.objects.get(id=template_id, organization=org)
+        t = EmailTemplate.objects.get(Q(organization=org) | Q(is_system=True), id=template_id)
     except EmailTemplate.DoesNotExist:
         raise HttpError(404, 'Template not found')
     t.pk = None
     t.id = None
     t.name = f'{t.name} (Copy)'
     t.is_system = False
+    t.organization = org  # copy always lands in the current org
     t.created_by = request.auth
     t.save()
     return TemplateOut.from_orm(t)

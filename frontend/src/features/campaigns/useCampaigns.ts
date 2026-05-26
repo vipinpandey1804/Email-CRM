@@ -66,7 +66,10 @@ export function useSendCampaign() {
   return useMutation({
     mutationFn: (id: string) =>
       api.post(`/campaigns/${id}/send-now?org_slug=${orgSlug}`).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['campaigns'] }),
+    onSuccess: (_data, id) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaign', id] })
+    },
   })
 }
 
@@ -76,6 +79,9 @@ export function useScheduleCampaign() {
   return useMutation({
     mutationFn: ({ id, scheduled_at }: { id: string; scheduled_at: string }) =>
       api.post(`/campaigns/${id}/schedule?org_slug=${orgSlug}`, { scheduled_at }).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['campaigns'] }),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaign', id] })
+    },
   })
 }
