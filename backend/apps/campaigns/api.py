@@ -7,7 +7,8 @@ from organizations.models import OrganizationUser
 from apps.accounts.auth import JWTAuth
 from apps.campaigns.models import Campaign, CampaignRecipient
 from apps.campaigns.schemas import (
-    CampaignCreateIn, CampaignUpdateIn, CampaignOut, ScheduleIn, RecipientOut
+    CampaignCreateIn, CampaignUpdateIn, CampaignOut, ScheduleIn, RecipientOut,
+    RecipientsAddIn,
 )
 from apps.campaigns.services import parse_recipient_csv
 
@@ -93,6 +94,8 @@ def schedule_campaign(request, org_slug: str, campaign_id: UUID, payload: Schedu
         c = Campaign.objects.get(id=campaign_id, organization=org, status='draft')
     except Campaign.DoesNotExist:
         raise HttpError(404, 'Draft campaign not found')
+    if not c.recipients.exists():
+        raise HttpError(400, 'Add at least one recipient before scheduling')
     c.status = 'scheduled'
     c.scheduled_at = payload.scheduled_at
     c.save()
@@ -114,6 +117,8 @@ def send_campaign_now(request, org_slug: str, campaign_id: UUID):
         c = Campaign.objects.get(id=campaign_id, organization=org, status='draft')
     except Campaign.DoesNotExist:
         raise HttpError(404, 'Draft campaign not found')
+    if not c.recipients.exists():
+        raise HttpError(400, 'Add at least one recipient before sending')
     c.status = 'sending'
     c.save()
     async_task('apps.campaigns.tasks.dispatch_campaign', str(campaign_id))
@@ -141,6 +146,31 @@ def upload_recipients(request, org_slug: str, campaign_id: UUID, file: UploadedF
     return {'total': len(recipients), 'created': created}
 
 
+@router.post('/{campaign_id}/recipients/manual')
+def add_recipients_manual(request, org_slug: str, campaign_id: UUID, payload: RecipientsAddIn):
+    """Add recipients from a JSON list of {email, name} (no CSV needed)."""
+    org = _get_org_or_403(request.auth, org_slug)
+    try:
+        c = Campaign.objects.get(id=campaign_id, organization=org)
+    except Campaign.DoesNotExist:
+        raise HttpError(404, 'Campaign not found')
+    created = 0
+    skipped = 0
+    for r in payload.recipients:
+        email = r.email.strip().lower()
+        if not email or '@' not in email:
+            skipped += 1
+            continue
+        _, was_created = CampaignRecipient.objects.update_or_create(
+            campaign=c,
+            email=email,
+            defaults={'name': r.name.strip(), 'status': 'queued'},
+        )
+        if was_created:
+            created += 1
+    return {'created': created, 'skipped': skipped, 'total': c.recipients.count()}
+
+
 @router.get('/{campaign_id}/recipients', response=List[RecipientOut])
 def list_recipients(request, org_slug: str, campaign_id: UUID):
     org = _get_org_or_403(request.auth, org_slug)
@@ -149,3 +179,16 @@ def list_recipients(request, org_slug: str, campaign_id: UUID):
     except Campaign.DoesNotExist:
         raise HttpError(404, 'Campaign not found')
     return [RecipientOut.from_orm(r) for r in c.recipients.all()]
+
+
+@router.delete('/{campaign_id}/recipients/{recipient_id}')
+def delete_recipient(request, org_slug: str, campaign_id: UUID, recipient_id: UUID):
+    org = _get_org_or_403(request.auth, org_slug)
+    try:
+        c = Campaign.objects.get(id=campaign_id, organization=org)
+    except Campaign.DoesNotExist:
+        raise HttpError(404, 'Campaign not found')
+    deleted, _ = CampaignRecipient.objects.filter(campaign=c, id=recipient_id).delete()
+    if not deleted:
+        raise HttpError(404, 'Recipient not found')
+    return {'detail': 'Recipient removed'}

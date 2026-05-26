@@ -45,6 +45,15 @@ class ScheduleIn(Schema):
     scheduled_at: datetime
 
 
+class RecipientIn(Schema):
+    email: str
+    name: str = ''
+
+
+class RecipientsAddIn(Schema):
+    recipients: List[RecipientIn]
+
+
 class RecipientOut(Schema):
     id: UUID
     email: str

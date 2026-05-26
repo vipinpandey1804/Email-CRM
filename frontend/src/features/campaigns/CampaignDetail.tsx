@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useCampaign, useSendCampaign, useScheduleCampaign } from './useCampaigns'
+import { useRecipients } from './useRecipients'
+import RecipientsPanel from './RecipientsPanel'
 import { AIPanel } from '@/features/ai/AIPanel'
 import { Send, Edit3, Clock } from 'lucide-react'
 
@@ -8,11 +10,25 @@ export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: campaign, isLoading } = useCampaign(id!)
+  const { data: recipients } = useRecipients(id!)
   const sendMutation = useSendCampaign()
   const [showSchedule, setShowSchedule] = useState(false)
   const [scheduledAt, setScheduledAt] = useState('')
   const scheduleMutation = useScheduleCampaign()
   const [showAI, setShowAI] = useState(false)
+  const [sendError, setSendError] = useState('')
+
+  const recipientCount = recipients?.length ?? 0
+  const isDraft = campaign?.status === 'draft'
+
+  const handleSend = async () => {
+    setSendError('')
+    try {
+      await sendMutation.mutateAsync(id!)
+    } catch (err: any) {
+      setSendError(err.response?.data?.detail || 'Could not send campaign')
+    }
+  }
 
   if (isLoading || !campaign)
     return (
@@ -56,13 +72,16 @@ export default function CampaignDetail() {
             </button>
             <button
               onClick={() => setShowSchedule(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-muted-foreground hover:bg-accent text-sm"
+              disabled={recipientCount === 0}
+              title={recipientCount === 0 ? 'Add at least one recipient first' : ''}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-muted-foreground hover:bg-accent text-sm disabled:opacity-50"
             >
               <Clock size={14} /> Schedule
             </button>
             <button
-              onClick={() => sendMutation.mutate(id!)}
-              disabled={sendMutation.isPending}
+              onClick={handleSend}
+              disabled={sendMutation.isPending || recipientCount === 0}
+              title={recipientCount === 0 ? 'Add at least one recipient first' : ''}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
             >
               <Send size={14} />
@@ -90,6 +109,23 @@ export default function CampaignDetail() {
             <p className="text-sm text-foreground">{value}</p>
           </div>
         ))}
+      </div>
+
+      {sendError && (
+        <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+          {sendError}
+        </div>
+      )}
+
+      {isDraft && recipientCount === 0 && (
+        <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
+          Add at least one recipient below before you can send or schedule this campaign.
+        </div>
+      )}
+
+      {/* Recipients */}
+      <div className="mb-6">
+        <RecipientsPanel campaignId={id!} editable={isDraft} />
       </div>
 
       {/* AI Panel */}
