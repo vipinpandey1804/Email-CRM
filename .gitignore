@@ -1,0 +1,33 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Django
+*.sqlite3
+backend/.env
+backend/staticfiles/
+
+# Env files
+.env
+*.env
+
+# Superpowers / IDE
+.superpowers/
+.claude/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
