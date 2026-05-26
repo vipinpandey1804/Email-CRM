@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import ProtectedRoute from '@/features/auth/ProtectedRoute'
 import LoginPage from '@/features/auth/LoginPage'
+import SignupPage from '@/features/auth/SignupPage'
 import GoogleOAuthCallback from '@/features/auth/GoogleOAuthCallback'
 import AppShell from '@/components/shared/AppShell'
 import CampaignList from '@/features/campaigns/CampaignList'
@@ -14,6 +15,7 @@ import OrgSettings from '@/features/settings/OrgSettings'
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/signup', element: <SignupPage /> },
   { path: '/auth/google/callback', element: <GoogleOAuthCallback /> },
   {
     path: '/',

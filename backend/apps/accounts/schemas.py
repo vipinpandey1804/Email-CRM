@@ -7,6 +7,13 @@ class LoginIn(Schema):
     password: str
 
 
+class RegisterIn(Schema):
+    full_name: str
+    email: str
+    password: str
+    organization_name: str
+
+
 class TokenOut(Schema):
     access: str
     refresh: str
