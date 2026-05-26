@@ -14,7 +14,7 @@ from apps.ai_features.api import (
     stream_cta_optimizer,
 )
 
-api = NinjaAPI(title='Maven Emailer API', version='1.0.0', docs_url='/api/docs')
+api = NinjaAPI(title='Maven Emailer API', version='1.0.0', docs_url='/docs')
 
 api.add_router('/auth/', auth_router, tags=['Auth'])
 api.add_router('/orgs/', orgs_router, tags=['Organizations'])
@@ -25,8 +25,11 @@ api.add_router('/ai/', ai_router, tags=['AI'])
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', api.urls),
-    # SSE streaming endpoints (async views, not Ninja schema endpoints)
+    # Ninja API mounted under /api so routes are /api/auth/..., /api/orgs/..., etc.
+    # (the frontend's axios baseURL is '/api'). Swagger UI lives at /api/docs.
+    path('api/', api.urls),
+    # SSE streaming endpoints (async views, not Ninja schema endpoints).
+    # The frontend fetches these under /ai (separate from the /api proxy path).
     path('ai/subject-lines/stream', stream_subject_lines, name='ai_subject_lines'),
     path('ai/copy-optimizer/stream', stream_copy_optimizer, name='ai_copy_optimizer'),
     path('ai/spam-checker/stream', stream_spam_checker, name='ai_spam_checker'),
