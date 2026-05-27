@@ -114,6 +114,13 @@ SIMPLE_JWT = {
     'SIGNING_KEY': SECRET_KEY,
 }
 
+# Request size limits.
+# The GrapesJS editor saves the full component tree + styles + compiled HTML
+# (which can embed inline/base64 images), so the default 2.5 MB limit is too
+# small. Allow large template payloads.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50 MB (recipient CSV uploads)
+
 # Django-Q2
 Q_CLUSTER = {
     'name': 'maven_emailer',
