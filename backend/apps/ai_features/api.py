@@ -83,6 +83,21 @@ async def _get_api_key(org):
     return await sync_to_async(_fetch)(org)
 
 
+def _sse_error(message: str) -> StreamingHttpResponse:
+    """Return a one-shot SSE stream carrying a single error event (HTTP 200).
+
+    The frontend's SSE reader shows the message in the AI panel; a non-200
+    JSON response would instead surface as a generic 'HTTP 4xx' string.
+    """
+    async def gen():
+        yield f"data: {json.dumps({'error': message})}\n\n"
+
+    response = StreamingHttpResponse(gen(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response
+
+
 async def _sse_stream(request, job_type: str):
     """Core SSE handler — shared by all four agent endpoints."""
     # 1. Auth
@@ -98,7 +113,13 @@ async def _sse_stream(request, job_type: str):
 
     # 3. Org + API key
     org = await _get_org_for_user(user)
-    api_key = await _get_api_key(org) if org else ''
+    if not org:
+        return _sse_error('No organization found for your account.')
+    api_key = await _get_api_key(org)
+    if not api_key:
+        return _sse_error(
+            'No OpenAI API key configured. Add one in Settings → OpenAI API Key.'
+        )
 
     # 4. Create job record
     from asgiref.sync import sync_to_async
@@ -111,9 +132,19 @@ async def _sse_stream(request, job_type: str):
         created_by=user,
     )
 
-    # 5. Pick agent
-    agent_cls = _AGENT_MAP[job_type]
-    agent = agent_cls(api_key=api_key)
+    # 5. Pick agent (construction can fail on a malformed key)
+    try:
+        agent_cls = _AGENT_MAP[job_type]
+        agent = agent_cls(api_key=api_key)
+    except Exception as exc:
+        logger.exception('AI agent init failed for job %s', job.pk)
+        from asgiref.sync import sync_to_async as _s2a
+        await _s2a(
+            lambda: AIJob.objects.filter(pk=job.pk).update(
+                status='failed', output_data={'error': str(exc)}, completed_at=timezone.now()
+            )
+        )()
+        return _sse_error(f'Could not initialize AI model: {exc}')
 
     # 6. Streaming generator
     async def event_generator():

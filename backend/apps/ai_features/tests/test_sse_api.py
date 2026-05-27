@@ -77,3 +77,47 @@ async def test_stream_subject_lines_rejects_get():
     client = AsyncClient()
     response = await client.get('/ai/subject-lines/stream')
     assert response.status_code == 405
+
+
+@pytest.mark.asyncio
+async def test_stream_without_api_key_returns_friendly_sse_error():
+    """No OpenAI key -> 200 SSE error event (not a 500)."""
+    mock_user = MagicMock()
+    mock_org = MagicMock()
+    with (
+        patch('apps.ai_features.api._resolve_user', new=AsyncMock(return_value=mock_user)),
+        patch('apps.ai_features.api._get_org_for_user', new=AsyncMock(return_value=mock_org)),
+        patch('apps.ai_features.api._get_api_key', new=AsyncMock(return_value='')),
+    ):
+        client = AsyncClient()
+        response = await client.post(
+            '/ai/subject-lines/stream',
+            data=json.dumps({'campaign_name': 'Q4 Push'}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Bearer fake-token',
+        )
+        assert response.status_code == 200
+        assert 'text/event-stream' in response['Content-Type']
+        body = b''.join([chunk async for chunk in response.streaming_content]).decode()
+    assert 'OpenAI API key' in body
+    assert '"error"' in body
+
+
+@pytest.mark.asyncio
+async def test_stream_without_org_returns_friendly_sse_error():
+    """User with no org -> 200 SSE error event (not a 500)."""
+    mock_user = MagicMock()
+    with (
+        patch('apps.ai_features.api._resolve_user', new=AsyncMock(return_value=mock_user)),
+        patch('apps.ai_features.api._get_org_for_user', new=AsyncMock(return_value=None)),
+    ):
+        client = AsyncClient()
+        response = await client.post(
+            '/ai/subject-lines/stream',
+            data=json.dumps({'campaign_name': 'Q4 Push'}),
+            content_type='application/json',
+            HTTP_AUTHORIZATION='Bearer fake-token',
+        )
+        assert response.status_code == 200
+        body = b''.join([chunk async for chunk in response.streaming_content]).decode()
+    assert 'organization' in body.lower()
