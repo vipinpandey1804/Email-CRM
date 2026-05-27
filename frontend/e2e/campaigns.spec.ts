@@ -49,6 +49,21 @@ test.describe('Campaigns', () => {
     await expect(page.getByText('SENDING')).toBeVisible({ timeout: 15_000 })
   })
 
+  test('adds recipients directly in the create wizard', async ({ page }) => {
+    await page.goto('/campaigns/new')
+    await page.getByPlaceholder('e.g. Cloud Transformation Q1 2026').fill('Wizard Recipients')
+    await page.getByPlaceholder(/Paste emails/).fill('dave@example.com, erin@example.com')
+    await expect(page.getByText('2 recipients will be added.')).toBeVisible()
+    await page.getByRole('button', { name: 'Create Campaign' }).click()
+
+    // Lands on detail with the recipients already attached
+    await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]{36}/, { timeout: 15_000 })
+    await expect(page.getByText('dave@example.com')).toBeVisible()
+    await expect(page.getByText('erin@example.com')).toBeVisible()
+    // Send is enabled because recipients exist
+    await expect(page.getByRole('button', { name: 'Send Now' })).toBeEnabled()
+  })
+
   test('removes a recipient', async ({ page }) => {
     await createCampaign(page, 'Remove Recipient Campaign')
     await page.getByPlaceholder(/Paste emails/).fill('carol@example.com')

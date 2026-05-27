@@ -2,6 +2,17 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreateCampaign } from './useCampaigns'
 import { useTemplates } from '@/features/templates/useTemplates'
+import api from '@/lib/api'
+import { getOrgSlug } from '@/lib/utils'
+
+// Pull email addresses out of free-form text (comma / space / newline separated)
+function parseEmails(text: string): { email: string }[] {
+  return text
+    .split(/[\s,;]+/)
+    .map((t) => t.trim())
+    .filter((t) => t.includes('@'))
+    .map((email) => ({ email }))
+}
 
 export default function CreateCampaignWizard() {
   const navigate = useNavigate()
@@ -18,6 +29,9 @@ export default function CreateCampaignWizard() {
     template_id: '',
   })
   const [tagInput, setTagInput] = useState('')
+  const [recipientsText, setRecipientsText] = useState('')
+
+  const recipientCount = parseEmails(recipientsText).length
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,6 +40,16 @@ export default function CreateCampaignWizard() {
       template_id: form.template_id || undefined,
     }
     const campaign = await createMutation.mutateAsync(payload)
+
+    // Attach any recipients entered here, before navigating away.
+    const recipients = parseEmails(recipientsText)
+    if (recipients.length > 0) {
+      await api.post(
+        `/campaigns/${campaign.id}/recipients/manual?org_slug=${getOrgSlug()}`,
+        { recipients }
+      )
+    }
+
     if (form.template_id) {
       navigate(`/editor/${form.template_id}?campaign_id=${campaign.id}`)
     } else {
@@ -165,6 +189,25 @@ export default function CreateCampaignWizard() {
               </span>
             ))}
           </div>
+        </div>
+
+        {/* Recipients */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            Recipients (optional)
+          </label>
+          <textarea
+            value={recipientsText}
+            onChange={(e) => setRecipientsText(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm"
+            placeholder="Paste emails separated by commas, spaces, or new lines&#10;e.g. alice@acme.com, bob@acme.com"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            {recipientCount > 0
+              ? `${recipientCount} recipient${recipientCount === 1 ? '' : 's'} will be added.`
+              : 'You can also add recipients (or upload a CSV) on the campaign page after creating.'}
+          </p>
         </div>
 
         {/* Actions */}

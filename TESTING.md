@@ -75,12 +75,12 @@ npm run e2e:report     # open the HTML report from the last run
 
 Playwright boots the servers, waits for `http://127.0.0.1:8000/api/docs` and `http://localhost:5174`, runs the specs, then shuts the servers down.
 
-### What E2E covers (21 tests)
+### What E2E covers (22 tests)
 
 | Spec | Scenarios |
 |------|-----------|
 | `auth.spec.ts` | Unauth redirect to `/login`; signup → dashboard; short-password rejected; login of existing user; wrong-password error; logout |
-| `campaigns.spec.ts` | Empty state; create campaign from scratch; **send blocked with 0 recipients**; add recipients → send → status `SENDING`; remove a recipient |
+| `campaigns.spec.ts` | Empty state; create campaign from scratch; **send blocked with 0 recipients**; add recipients → send → status `SENDING`; **add recipients in the create wizard**; remove a recipient |
 | `templates.spec.ts` | Library renders; create template → opens GrapesJS editor; category filter |
 | `settings.spec.ts` | Org settings prefilled; rename org; navigate to SMTP; save SMTP config |
 | `navigation-and-ai.spec.ts` | Sidebar navigation; AI panel opens with all four tabs; switch AI tabs |
