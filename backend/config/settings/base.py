@@ -145,3 +145,7 @@ STATIC_URL = '/static/'
 
 # Fernet encryption key for SMTPConfig.password
 FERNET_KEYS = [os.environ.get('FERNET_KEY', 'RqgUkzXLpMxb46dGLkGJZ6jRv6OeD4pxYF1BI3RFfJQ=')]
+
+# OpenAI — used by AI features when an org has no per-org key configured.
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o')

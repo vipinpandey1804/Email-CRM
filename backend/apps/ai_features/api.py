@@ -72,13 +72,19 @@ async def _get_org_for_user(user):
 
 
 async def _get_api_key(org):
+    """Per-org OpenAI key (Settings → OpenAI API Key), falling back to the
+    OPENAI_API_KEY from .env / settings when the org hasn't configured one."""
     from asgiref.sync import sync_to_async
+    from django.conf import settings
 
     def _fetch(o):
+        org_key = ''
         try:
-            return o.organizationprofile.openai_api_key or ''
+            # OrganizationProfile is exposed via related_name 'profile'.
+            org_key = o.profile.openai_api_key or ''
         except Exception:
-            return ''
+            org_key = ''
+        return org_key or getattr(settings, 'OPENAI_API_KEY', '') or ''
 
     return await sync_to_async(_fetch)(org)
 
