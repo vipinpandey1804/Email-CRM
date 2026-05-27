@@ -25,6 +25,7 @@ from .agents.subject_line import SubjectLineAgent
 from .agents.copy_optimizer import CopyOptimizerAgent
 from .agents.spam_checker import SpamCheckerAgent
 from .agents.cta_optimizer import CTAOptimizerAgent
+from .agents.email_builder import EmailBuilderAgent
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ _AGENT_MAP = {
     'copy_optimize': CopyOptimizerAgent,
     'spam_check': SpamCheckerAgent,
     'cta_suggest': CTAOptimizerAgent,
+    'email_build': EmailBuilderAgent,
 }
 
 
@@ -226,3 +228,11 @@ async def stream_cta_optimizer(request):
     if request.method != 'POST':
         return JsonResponse({'detail': 'Method not allowed'}, status=405)
     return await _sse_stream(request, 'cta_suggest')
+
+
+@csrf_exempt
+async def stream_email_builder(request):
+    """POST /ai/email-builder/stream — stream a full MJML email design."""
+    if request.method != 'POST':
+        return JsonResponse({'detail': 'Method not allowed'}, status=405)
+    return await _sse_stream(request, 'email_build')

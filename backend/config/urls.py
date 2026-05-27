@@ -12,6 +12,7 @@ from apps.ai_features.api import (
     stream_copy_optimizer,
     stream_spam_checker,
     stream_cta_optimizer,
+    stream_email_builder,
 )
 
 api = NinjaAPI(title='Maven Emailer API', version='1.0.0', docs_url='/docs')
@@ -34,4 +35,5 @@ urlpatterns = [
     path('ai/copy-optimizer/stream', stream_copy_optimizer, name='ai_copy_optimizer'),
     path('ai/spam-checker/stream', stream_spam_checker, name='ai_spam_checker'),
     path('ai/cta-optimizer/stream', stream_cta_optimizer, name='ai_cta_optimizer'),
+    path('ai/email-builder/stream', stream_email_builder, name='ai_email_builder'),
 ]

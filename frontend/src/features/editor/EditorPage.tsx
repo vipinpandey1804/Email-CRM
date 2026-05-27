@@ -118,7 +118,12 @@ export default function EditorPage() {
         {/* AI Sidebar */}
         {showAI && (
           <div className="w-80 border-l border-border bg-card overflow-y-auto flex-shrink-0 absolute right-0 top-0 bottom-0">
-            <AIPanel campaignId={campaignId} subjectLine={subjectLine} />
+            <AIPanel
+              campaignId={campaignId}
+              subjectLine={subjectLine}
+              emailTitle={template.name}
+              inEditor
+            />
           </div>
         )}
       </div>

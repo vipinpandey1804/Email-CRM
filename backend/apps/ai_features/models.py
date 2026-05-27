@@ -10,6 +10,7 @@ class AIJob(models.Model):
         ('copy_optimize', 'Copy Optimize'),
         ('spam_check', 'Spam Check'),
         ('cta_suggest', 'CTA Suggest'),
+        ('email_build', 'Email Build'),
     ]
     STATUS_CHOICES = [
         ('pending', 'Pending'),

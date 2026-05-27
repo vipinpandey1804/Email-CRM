@@ -10,6 +10,7 @@ const ENDPOINTS: Record<string, string> = {
   copy_optimize: '/ai/copy-optimizer/stream',
   spam_check: '/ai/spam-checker/stream',
   cta_suggest: '/ai/cta-optimizer/stream',
+  email_build: '/ai/email-builder/stream',
 }
 
 interface StreamOptions {

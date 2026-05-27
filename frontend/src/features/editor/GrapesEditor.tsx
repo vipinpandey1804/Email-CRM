@@ -86,12 +86,23 @@ export default function GrapesEditor({ template, onSave }: Props) {
     const onSaveRequest = () => handleSave()
     window.addEventListener('editor:save-request', onSaveRequest)
 
+    // External "load MJML" trigger (AI email builder)
+    const onLoadMjml = (e: Event) => {
+      const mjml = (e as CustomEvent<string>).detail
+      if (mjml && mjml.includes('<mjml')) {
+        editor.setComponents(mjml)
+        markDirty()
+      }
+    }
+    window.addEventListener('editor:load-mjml', onLoadMjml)
+
     // Auto-save every 30 seconds
     const autoSaveInterval = window.setInterval(handleSave, 30_000)
 
     return () => {
       window.clearInterval(autoSaveInterval)
       window.removeEventListener('editor:save-request', onSaveRequest)
+      window.removeEventListener('editor:load-mjml', onLoadMjml)
       editor.destroy()
       editorRef.current = null
     }
