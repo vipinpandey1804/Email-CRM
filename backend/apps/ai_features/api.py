@@ -62,11 +62,11 @@ async def _get_org_for_user(user):
     def _fetch(u):
         profile = (
             OrganizationUserProfile.objects
-            .select_related('organization_user__organization')
-            .filter(organization_user__user=u)
+            .select_related('org_user__organization')
+            .filter(org_user__user=u)
             .first()
         )
-        return profile.organization_user.organization if profile else None
+        return profile.org_user.organization if profile else None
 
     return await sync_to_async(_fetch)(user)
 
