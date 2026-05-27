@@ -100,6 +100,32 @@ def test_duplicate_system_template_lands_in_user_org():
 
 
 @pytest.mark.django_db
+def test_saving_system_template_forks_into_user_org():
+    user = UserFactory()
+    org = OrganizationFactory()
+    system_org = OrganizationFactory(name='Maven System')
+    OrganizationUserFactory(organization=org, user=user)
+    sys_tpl = EmailTemplateFactory(organization=system_org, name='Connecting', is_system=True)
+
+    resp = client.patch(
+        f'/{sys_tpl.id}?org_slug={org.slug}',
+        json={'html_output': '<p>my edit</p>', 'mjml_source': '<mjml></mjml>'},
+        headers=auth_headers(user),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    # A new template was created (different id) in the user's org
+    assert body['id'] != str(sys_tpl.id)
+    assert body['is_system'] is False
+    fork = EmailTemplate.objects.get(id=body['id'])
+    assert fork.organization_id == org.id
+    assert fork.html_output == '<p>my edit</p>'
+    # Original system template is untouched
+    sys_tpl.refresh_from_db()
+    assert sys_tpl.html_output != '<p>my edit</p>'
+
+
+@pytest.mark.django_db
 def test_get_system_template_from_other_org():
     user = UserFactory()
     org = OrganizationFactory()

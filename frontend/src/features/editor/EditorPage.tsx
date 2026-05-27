@@ -29,13 +29,19 @@ export default function EditorPage() {
 
   const handleSave = useCallback(
     async (data: SavePayload) => {
-      await saveMutation.mutateAsync(data)
+      const saved = await saveMutation.mutateAsync(data)
       if (campaignId && subjectLine) {
         await updateCampaign.mutateAsync({ subject_line: subjectLine })
       }
+      // If the backend forked a system template into our org, the id changed —
+      // switch the editor to the new copy so further saves target it.
+      if (saved && saved.id && saved.id !== templateId) {
+        const qs = campaignId ? `?campaign_id=${campaignId}` : ''
+        navigate(`/editor/${saved.id}${qs}`, { replace: true })
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [campaignId, subjectLine]
+    [campaignId, subjectLine, templateId]
   )
 
   if (isLoading || !template) {
@@ -60,8 +66,19 @@ export default function EditorPage() {
           </button>
           <span className="text-muted-foreground">/</span>
           <span className="text-sm font-medium text-foreground">{template.name}</span>
-          {isDirty && <span className="text-xs text-yellow-400">● Unsaved</span>}
-          {!isDirty && lastSaved && (
+          {saveMutation.isError && (
+            <span className="text-xs text-destructive">
+              ● Save failed
+              {(() => {
+                const detail = (saveMutation.error as any)?.response?.data?.detail
+                return detail ? ` — ${detail}` : ''
+              })()}
+            </span>
+          )}
+          {!saveMutation.isError && isDirty && (
+            <span className="text-xs text-yellow-400">● Unsaved</span>
+          )}
+          {!saveMutation.isError && !isDirty && lastSaved && (
             <span className="text-xs text-muted-foreground">
               Saved {lastSaved.toLocaleTimeString()}
             </span>

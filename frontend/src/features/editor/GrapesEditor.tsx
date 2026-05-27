@@ -14,7 +14,7 @@ interface SavePayload {
 
 interface Props {
   template: EmailTemplate
-  onSave: (data: SavePayload) => void
+  onSave: (data: SavePayload) => void | Promise<void>
 }
 
 export default function GrapesEditor({ template, onSave }: Props) {
@@ -51,7 +51,7 @@ export default function GrapesEditor({ template, onSave }: Props) {
         `<mjml><mj-body><mj-section><mj-column><mj-text>Start designing your email…</mj-text></mj-column></mj-section></mj-body></mjml>`
     )
 
-    const handleSave = () => {
+    const handleSave = async () => {
       let html = ''
       let mjml = ''
       try {
@@ -70,13 +70,18 @@ export default function GrapesEditor({ template, onSave }: Props) {
       const styles = editor.getStyle().toJSON()
 
       setGjsData({ components, styles })
-      onSaveRef.current({
-        gjs_components: components,
-        gjs_styles: styles,
-        mjml_source: mjml,
-        html_output: html,
-      })
-      markSaved()
+      try {
+        // Only mark as saved once the backend actually persisted it.
+        await onSaveRef.current({
+          gjs_components: components,
+          gjs_styles: styles,
+          mjml_source: mjml,
+          html_output: html,
+        })
+        markSaved()
+      } catch {
+        // Leave the editor dirty; EditorPage surfaces the error.
+      }
     }
 
     // Mark dirty on any change

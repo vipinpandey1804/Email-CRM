@@ -61,7 +61,19 @@ def save_template(request, org_slug: str, template_id: UUID, payload: TemplateSa
     try:
         t = EmailTemplate.objects.get(id=template_id, organization=org)
     except EmailTemplate.DoesNotExist:
-        raise HttpError(404, 'Template not found')
+        # Editing a shared system template? Fork it into this org on save so
+        # the user keeps their edits in their own (editable) copy. The response
+        # carries the new id; the editor switches to it for subsequent saves.
+        src = EmailTemplate.objects.filter(id=template_id, is_system=True).first()
+        if src is None:
+            raise HttpError(404, 'Template not found')
+        t = EmailTemplate(
+            organization=org,
+            name=src.name,
+            category=src.category,
+            is_system=False,
+            created_by=request.auth,
+        )
     for field, value in payload.dict(exclude_none=True).items():
         setattr(t, field, value)
     t.save()
